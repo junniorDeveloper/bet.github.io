@@ -852,7 +852,7 @@
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {filteredBets.map(bet => (
+                                            {[...filteredBets].reverse().map(bet => (
                                                 <tr key={bet.id} style={{borderTop: '1px solid var(--border-color)'}}>
                                                     <td className="px-4 py-3">
                                                         <span className="mono-font text-sm" style={{color: 'var(--text-primary)'}}>{bet.id}</span>
@@ -1064,4 +1064,5 @@
         ReactDOM.render(<BettingManagementApp />, document.getElementById('root'));
     </script>
 </body>
+
 </html>
