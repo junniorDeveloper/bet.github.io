@@ -1,0 +1,1067 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Apuestas</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f9fafb;
+            --text-primary: #000000;
+            --text-secondary: #6b7280;
+            --text-tertiary: #9ca3af;
+            --border-color: #e5e5e5;
+            --card-bg: #ffffff;
+            --card-border: #d1d5db;
+            --hover-bg: #f5f5f5;
+            --active-bg: #000000;
+            --active-text: #ffffff;
+            --shadow: rgba(0, 0, 0, 0.08);
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #141414;
+            --text-primary: #ffffff;
+            --text-secondary: #a3a3a3;
+            --text-tertiary: #737373;
+            --border-color: #262626;
+            --card-bg: #171717;
+            --card-border: #262626;
+            --hover-bg: #262626;
+            --active-bg: #ffffff;
+            --active-text: #000000;
+            --shadow: rgba(0, 0, 0, 0.3);
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+        }
+
+        body {
+            font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding-top: 65px;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        .mono-font {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .navbar-fixed {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 50;
+            background: var(--bg-primary);
+            border-bottom: 1px solid var(--border-color);
+            transition: background-color 0.3s ease, border-color 0.3s ease;
+        }
+
+        .sidebar {
+            position: fixed;
+            top: 65px;
+            left: 0;
+            bottom: 0;
+            width: 280px;
+            background: var(--bg-primary);
+            border-right: 1px solid var(--border-color);
+            transform: translateX(-100%);
+            transition: transform 0.3s ease, background-color 0.3s ease, border-color 0.3s ease;
+            z-index: 40;
+            overflow-y: auto;
+        }
+
+        .sidebar.open {
+            transform: translateX(0);
+        }
+
+        .sidebar-overlay {
+            position: fixed;
+            top: 65px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+            z-index: 30;
+        }
+
+        .sidebar-overlay.open {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .btn-primary {
+            background: var(--active-bg);
+            color: var(--active-text);
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary:hover {
+            opacity: 0.9;
+        }
+
+        .btn-secondary {
+            background: var(--card-bg);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            transition: all 0.2s ease;
+        }
+
+        .btn-secondary:hover {
+            background: var(--hover-bg);
+        }
+
+        .input-field {
+            background: var(--card-bg);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            transition: all 0.2s ease;
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: var(--text-primary);
+        }
+
+        /* Custom Select Dropdown */
+        .custom-select {
+            position: relative;
+            display: inline-block;
+            width: 100%;
+        }
+
+        .custom-select select {
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            background: var(--card-bg);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            padding: 0.5rem 2.5rem 0.5rem 1rem;
+            border-radius: 0.5rem;
+            width: 100%;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .custom-select select:hover {
+            background: var(--hover-bg);
+        }
+
+        .custom-select select:focus {
+            outline: none;
+            border-color: var(--text-primary);
+        }
+
+        .custom-select::after {
+            content: '\f078';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            position: absolute;
+            right: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            pointer-events: none;
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+        }
+
+        /* Button Loading State */
+        .btn-loading {
+            opacity: 0.6;
+            cursor: not-allowed;
+            position: relative;
+        }
+
+        .btn-loading::after {
+            content: '';
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            top: 50%;
+            left: 50%;
+            margin-left: -8px;
+            margin-top: -8px;
+            border: 2px solid transparent;
+            border-top-color: currentColor;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 60;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal-content {
+            background: var(--card-bg);
+            border-radius: 12px;
+            max-width: 500px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .status-ganada {
+            background: var(--success);
+            color: white;
+        }
+
+        .status-perdida {
+            background: var(--danger);
+            color: white;
+        }
+
+        .status-pendiente {
+            background: var(--warning);
+            color: white;
+        }
+
+        .theme-toggle {
+            background: var(--card-bg);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            transition: all 0.2s ease;
+        }
+
+        .theme-toggle:hover {
+            background: var(--hover-bg);
+        }
+
+        @media (min-width: 768px) {
+            body {
+                padding-top: 65px;
+            }
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        const BettingManagementApp = () => {
+            const [bets, setBets] = useState([]);
+            const [loading, setLoading] = useState(true);
+            const [sidebarOpen, setSidebarOpen] = useState(false);
+            const [theme, setTheme] = useState('light');
+            const [modalOpen, setModalOpen] = useState(false);
+            const [editingBet, setEditingBet] = useState(null);
+            const [filterStatus, setFilterStatus] = useState('all');
+            const [filterSource, setFilterSource] = useState('all');
+            const [filterTimeEvent, setFilterTimeEvent] = useState('all');
+            const [filterDateRange, setFilterDateRange] = useState('all'); // all, week, month
+            const [chartData, setChartData] = useState(null);
+            const [submitting, setSubmitting] = useState(false);
+            const chartRef = useRef(null);
+            const chartInstance = useRef(null);
+            const [modalDeleteOpen, setModalDeleteOpen] = useState(false);
+            const [betToDelete, setBetToDelete] = useState(null);
+
+
+            const API_URL = 'https://script.google.com/macros/s/AKfycbyd-FbN3BS0BRjWYK7sLp5XhKtavb2oNrm2ywYmv-0BcoiO_HN9NdstsQAO-1WDs3we/exec';
+
+            const [formData, setFormData] = useState({
+                deport: 'futbol',
+                source: 'tipster',
+                time_event: 'antes',
+                odds: '',
+                status: 'pendiente',
+                date: new Date().toISOString().split('T')[0]
+            });
+
+            useEffect(() => {
+                loadBets();
+                const savedTheme = localStorage.getItem('theme') || 'light';
+                setTheme(savedTheme);
+                document.documentElement.setAttribute('data-theme', savedTheme);
+            }, []);
+
+            useEffect(() => {
+                if (chartRef.current) {
+                    updateChart();
+                }
+            }, [bets, filterStatus, filterSource, filterTimeEvent, filterDateRange]);
+
+            const loadBets = async () => {
+                try {
+                    const response = await fetch(`${API_URL}?ruta=api/v1/bet`);
+                    const result = await response.json();
+                    
+                    if (result.success && result.data) {
+                        setBets(result.data);
+                        // Forzar actualización del gráfico después de cargar datos
+                        setTimeout(() => {
+                            if (chartRef.current) {
+                                updateChart();
+                            }
+                        }, 100);
+                    }
+                    setLoading(false);
+                } catch (error) {
+                    console.error('Error loading bets:', error);
+                    setLoading(false);
+                }
+            };
+
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                
+                if (submitting) return;
+                setSubmitting(true);
+
+                try {
+                    const endpoint = editingBet 
+                        ? `${API_URL}?ruta=api/v1/bet/update`
+                        : `${API_URL}?ruta=api/v1/bet/create`;
+
+                    const dataToSend = editingBet 
+                        ? { id: editingBet.id, ...formData }
+                        : formData;
+
+                    await fetch(endpoint, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(dataToSend)
+                    });
+
+                    console.log('Datos enviados:', dataToSend);
+                    
+                    // Esperar un momento y recargar datos
+                    setTimeout(() => {
+                        loadBets();
+                        closeModal();
+                        setSubmitting(false);
+                    }, 1000);
+
+                } catch (error) {
+                    console.error('Error:', error);
+                    setSubmitting(false);
+                }
+            };
+
+            
+            const handleDelete = (id) => {
+                setBetToDelete(id);
+                setModalDeleteOpen(true);
+            };
+
+            const closeDeleteModal = () => {
+                setModalDeleteOpen(false);
+                setBetToDelete(null);
+            };
+
+            const confirmDelete = async () => {
+                if (!betToDelete) return;
+
+                try {
+                    await fetch(`${API_URL}?ruta=api/v1/bet/delete`, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ id: betToDelete })
+                    });
+
+                    console.log('Apuesta eliminada:', betToDelete);
+
+                    setTimeout(() => {
+                        loadBets();
+                        closeDeleteModal();
+                    }, 1000);
+                } catch (error) {
+                    console.error('Error:', error);
+                }
+            };
+
+
+
+            const openModal = (bet = null) => {
+                if (bet) {
+                    setEditingBet(bet);
+                    setFormData({
+                        deport: bet.deport,
+                        source: bet.source,
+                        time_event: bet.time_event,
+                        odds: bet.odds,
+                        status: bet.status,
+                        date: new Date(bet.date).toISOString().split('T')[0]
+                    });
+                } else {
+                    setEditingBet(null);
+                    setFormData({
+                        deport: 'futbol',
+                        source: 'tipster',
+                        time_event: 'antes',
+                        odds: '',
+                        status: 'pendiente',
+                        date: new Date().toISOString().split('T')[0]
+                    });
+                }
+                setModalOpen(true);
+            };
+
+            const closeModal = () => {
+                setModalOpen(false);
+                setEditingBet(null);
+                setSubmitting(false);
+            };
+
+            const toggleTheme = () => {
+                const newTheme = theme === 'light' ? 'dark' : 'light';
+                setTheme(newTheme);
+                document.documentElement.setAttribute('data-theme', newTheme);
+                localStorage.setItem('theme', newTheme);
+            };
+
+            const toggleSidebar = () => {
+                setSidebarOpen(!sidebarOpen);
+            };
+
+            const clearFilters = () => {
+                setFilterStatus('all');
+                setFilterSource('all');
+                setFilterTimeEvent('all');
+                setFilterDateRange('all');
+            };
+
+            const isWithinDateRange = (betDate) => {
+                if (filterDateRange === 'all') return true;
+
+                const today = new Date();
+                const date = new Date(betDate);
+                
+                if (filterDateRange === 'week') {
+                    // Última semana (7 días)
+                    const weekAgo = new Date(today);
+                    weekAgo.setDate(today.getDate() - 7);
+                    return date >= weekAgo && date <= today;
+                }
+                
+                if (filterDateRange === 'month') {
+                    // Último mes (30 días)
+                    const monthAgo = new Date(today);
+                    monthAgo.setDate(today.getDate() - 30);
+                    return date >= monthAgo && date <= today;
+                }
+                
+                return true;
+            };
+
+            const getFilteredBets = () => {
+                return bets.filter(bet => {
+                    if (filterStatus !== 'all' && bet.status !== filterStatus) return false;
+                    if (filterSource !== 'all' && bet.source !== filterSource) return false;
+                    if (filterTimeEvent !== 'all' && bet.time_event !== filterTimeEvent) return false;
+                    if (!isWithinDateRange(bet.date)) return false;
+                    return true;
+                });
+            };
+
+            const getStats = () => {
+                const filtered = getFilteredBets();
+                const total = filtered.length;
+                const ganadas = filtered.filter(b => b.status === 'ganada').length;
+                const perdidas = filtered.filter(b => b.status === 'perdida').length;
+                const pendientes = filtered.filter(b => b.status === 'pendiente').length;
+
+                return { total, ganadas, perdidas, pendientes };
+            };
+
+            const updateChart = () => {
+                if (!chartRef.current) return;
+                
+                const stats = getStats();
+                
+                if (chartInstance.current) {
+                    chartInstance.current.destroy();
+                }
+
+                const ctx = chartRef.current.getContext('2d');
+                
+                // Si no hay datos, mostrar valores en 0 en lugar de ocultar el gráfico
+                const hasData = stats.ganadas > 0 || stats.perdidas > 0 || stats.pendientes > 0;
+                const chartValues = hasData 
+                    ? [stats.ganadas, stats.perdidas, stats.pendientes]
+                    : [1, 1, 1]; // Mostrar gráfico uniforme cuando no hay datos
+                
+                chartInstance.current = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Ganadas', 'Perdidas', 'Pendientes'],
+                        datasets: [{
+                            data: chartValues,
+                            backgroundColor: hasData 
+                                ? ['#10b981', '#ef4444', '#f59e0b']
+                                : ['#e5e7eb', '#e5e7eb', '#e5e7eb'], // Gris cuando no hay datos
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    color: getComputedStyle(document.documentElement).getPropertyValue('--text-primary'),
+                                    padding: 15
+                                }
+                            },
+                            tooltip: {
+                                enabled: hasData // Deshabilitar tooltip si no hay datos
+                            }
+                        }
+                    }
+                });
+            };
+
+            const filteredBets = getFilteredBets();
+            const stats = getStats();
+
+            if (loading) {
+                return (
+                    <div className="min-h-[90vh] flex items-center justify-center bg-white">
+                        <div className="text-lg" style={{color: 'var(--text-primary)'}}>
+                            <i className="fas fa-spinner fa-spin mr-2"></i>
+                            Cargando...
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="min-h-screen" style={{background: 'var(--bg-primary)'}}>
+                    {/* Navbar */}
+                    <nav className="navbar-fixed">
+                        <div className="max-w-7xl mx-auto px-4 py-4">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <button
+                                        onClick={toggleSidebar}
+                                        className="md:hidden py-2 px-3 rounded-lg transition-colors"
+                                        style={{color: 'var(--text-primary)', background: 'var(--hover-bg)'}}
+                                    >
+                                        <i className="fas fa-bars text-xl"></i>
+                                    </button>
+                                    <h1 className="text-xl md:text-xl font-semibold" style={{color: 'var(--text-primary)'}}>
+                                        Gestión de Apuestas
+                                    </h1>
+                                </div>
+
+                                <div className="flex items-center gap-3">
+                                    <button
+                                        className="hidden md:block theme-toggle py-1.5 px-3 rounded-lg"
+                                        onClick={() => window.location.href = 'goal.html'}
+                                        >
+                                        <i class="fa-solid fa-sliders"></i>
+                                    </button>
+                                    <button
+                                        onClick={toggleTheme}
+                                        className="hidden md:block theme-toggle py-1.5 px-3 rounded-lg"
+                                    >
+                                        <i className={`fas ${theme === 'light' ? 'fa-moon' : 'fa-sun'}`}></i>
+                                    </button>
+                                    <button
+                                        onClick={() => openModal()}
+                                        className="btn-primary px-4 py-2 rounded-lg text-sm font-medium"
+                                    >
+                                        <i className="fas fa-plus sm:mr-2"></i>
+                                        <span className="hidden sm:inline">Nueva Apuesta</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </nav>
+
+                    {/* Sidebar Overlay */}
+                    <div 
+                        className={`sidebar-overlay ${sidebarOpen ? 'open' : ''}`}
+                        onClick={() => setSidebarOpen(false)}
+                    ></div>
+
+                    {/* Sidebar */}
+                    <aside className={`sidebar md:hidden ${sidebarOpen ? 'open' : ''}`}>
+                        <div className="p-6">
+
+                            
+
+                            <h2 className="text-sm font-semibold uppercase tracking-wide mb-4" style={{color: 'var(--text-secondary)'}}>
+                                Filtros
+                            </h2>
+                            
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="text-xs uppercase tracking-wide mb-2 block" style={{color: 'var(--text-tertiary)'}}>Estado</label>
+                                    <div className="custom-select">
+                                        <select 
+                                            value={filterStatus}
+                                            onChange={(e) => setFilterStatus(e.target.value)}
+                                            className="text-sm"
+                                        >
+                                            <option value="all">Todos</option>
+                                            <option value="ganada">Ganadas</option>
+                                            <option value="perdida">Perdidas</option>
+                                            <option value="pendiente">Pendientes</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="text-xs uppercase tracking-wide mb-2 block" style={{color: 'var(--text-tertiary)'}}>Fuente</label>
+                                    <div className="custom-select">
+                                        <select 
+                                            value={filterSource}
+                                            onChange={(e) => setFilterSource(e.target.value)}
+                                            className="text-sm"
+                                        >
+                                            <option value="all">Todas</option>
+                                            <option value="tipster">Tipster</option>
+                                            <option value="propio">Propio</option>
+                                            <option value="gratis">Gratis</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="text-xs uppercase tracking-wide mb-2 block" style={{color: 'var(--text-tertiary)'}}>Tiempo</label>
+                                    <div className="custom-select">
+                                        <select 
+                                            value={filterTimeEvent}
+                                            onChange={(e) => setFilterTimeEvent(e.target.value)}
+                                            className="text-sm"
+                                        >
+                                            <option value="all">Todos</option>
+                                            <option value="antes">Antes</option>
+                                            <option value="vivo">Vivo</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="text-xs uppercase tracking-wide mb-2 block" style={{color: 'var(--text-tertiary)'}}>Periodo</label>
+                                    <div className="custom-select">
+                                        <select 
+                                            value={filterDateRange}
+                                            onChange={(e) => setFilterDateRange(e.target.value)}
+                                            className="text-sm"
+                                        >
+                                            <option value="all">Todo el tiempo</option>
+                                            <option value="week">Última semana</option>
+                                            <option value="month">Último mes</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="mt-4">
+                                <button
+                                    onClick={clearFilters}
+                                    className="w-full btn-secondary px-4 py-2.5 rounded-lg text-sm font-medium flex items-center justify-center gap-2"
+                                >
+                                    <i className="fas fa-filter-circle-xmark"></i>
+                                    Limpiar Filtros
+                                </button>
+                            </div>
+
+                            <div className=" mt-4 pt-4" style={{ borderTop: '1px solid var(--border-color)' }}>
+                                <h2 className="text-sm font-semibold uppercase tracking-wide mb-3" style={{color: 'var(--text-secondary)'}}>
+                                    Apariencia
+                                </h2>
+                                <button
+                                    onClick={toggleTheme}
+                                    className="w-full theme-toggle px-4 py-3 rounded-lg text-sm font-medium flex items-center justify-between"
+                                >
+                                    <span>
+                                        <i className={`fas ${theme === 'light' ? 'fa-moon' : 'fa-sun'} mr-3`}></i>
+                                        {theme === 'light' ? 'Modo Oscuro' : 'Modo Claro'}
+                                    </span>
+                                </button>
+                            </div>
+
+                            <div className=" mt-4 ">
+                                <h2 className="text-sm font-semibold uppercase tracking-wide mb-3" style={{color: 'var(--text-secondary)'}}>
+                                    Ir a Estrategia
+                                </h2>
+                                <button
+                                    onClick={() => window.location.href = 'goal.html'}
+                                    className="w-full theme-toggle px-4 py-3 rounded-lg text-sm font-medium flex items-center justify-between"
+                                >
+                                    <span>
+                                        <i class="fa-solid fa-sliders mr-2"></i>
+                                        Estrategia Progresiva
+                                    </span>
+                                </button>
+                            </div>
+
+                            
+                            
+                        </div>
+                    </aside>
+
+                    {/* Main Content */}
+                    <div className="py-6 px-4">
+                        <div className="max-w-7xl mx-auto">
+                            {/* Stats */}
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                                <div className="rounded-lg p-4" style={{border: '1px solid var(--border-color)', background: 'var(--card-bg)'}}>
+                                    <div className="text-2xl font-semibold mono-font" style={{color: 'var(--text-primary)'}}>{stats.total}</div>
+                                    <div className="text-xs mt-1 uppercase tracking-wide" style={{color: 'var(--text-tertiary)'}}>Total</div>
+                                </div>
+                                <div className="rounded-lg p-4" style={{border: '1px solid var(--border-color)', background: 'var(--card-bg)'}}>
+                                    <div className="text-2xl font-semibold mono-font" style={{color: 'var(--success)'}}>{stats.ganadas}</div>
+                                    <div className="text-xs mt-1 uppercase tracking-wide" style={{color: 'var(--text-tertiary)'}}>Ganadas</div>
+                                </div>
+                                <div className="rounded-lg p-4" style={{border: '1px solid var(--border-color)', background: 'var(--card-bg)'}}>
+                                    <div className="text-2xl font-semibold mono-font" style={{color: 'var(--danger)'}}>{stats.perdidas}</div>
+                                    <div className="text-xs mt-1 uppercase tracking-wide" style={{color: 'var(--text-tertiary)'}}>Perdidas</div>
+                                </div>
+                                <div className="rounded-lg p-4" style={{border: '1px solid var(--border-color)', background: 'var(--card-bg)'}}>
+                                    <div className="text-2xl font-semibold mono-font" style={{color: 'var(--warning)'}}>{stats.pendientes}</div>
+                                    <div className="text-xs mt-1 uppercase tracking-wide" style={{color: 'var(--text-tertiary)'}}>Pendientes</div>
+                                </div>
+                            </div>
+
+                            {/* Filters Desktop */}
+                            <div className="hidden md:flex gap-4 mb-6 items-center">
+                                <div className="custom-select">
+                                    <select 
+                                        value={filterStatus}
+                                        onChange={(e) => setFilterStatus(e.target.value)}
+                                        className="text-sm"
+                                    >
+                                        <option value="all">Todos los estados</option>
+                                        <option value="ganada">Ganadas</option>
+                                        <option value="perdida">Perdidas</option>
+                                        <option value="pendiente">Pendientes</option>
+                                    </select>
+                                </div>
+
+                                <div className="custom-select">
+                                    <select 
+                                        value={filterSource}
+                                        onChange={(e) => setFilterSource(e.target.value)}
+                                        className="text-sm"
+                                    >
+                                        <option value="all">Todas las fuentes</option>
+                                        <option value="tipster">Tipster</option>
+                                        <option value="propio">Propio</option>
+                                        <option value="gratis">Gratis</option>
+                                    </select>
+                                </div>
+
+                                <div className="custom-select">
+                                    <select 
+                                        value={filterTimeEvent}
+                                        onChange={(e) => setFilterTimeEvent(e.target.value)}
+                                        className="text-sm"
+                                    >
+                                        <option value="all">Todos los tiempos</option>
+                                        <option value="antes">Antes</option>
+                                        <option value="vivo">Vivo</option>
+                                    </select>
+                                </div>
+
+                                <div className="custom-select">
+                                    <select 
+                                        value={filterDateRange}
+                                        onChange={(e) => setFilterDateRange(e.target.value)}
+                                        className="text-sm"
+                                    >
+                                        <option value="all">Todo el tiempo</option>
+                                        <option value="week">Última semana</option>
+                                        <option value="month">Último mes</option>
+                                    </select>
+                                </div>
+
+                                <button
+                                    onClick={clearFilters}
+                                    className="btn-secondary px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap"
+                                    title="Limpiar todos los filtros"
+                                >
+                                    <i className="fas fa-filter-circle-xmark mr-2"></i>
+                                    Limpiar
+                                </button>
+                            </div>
+
+                            {/* Chart */}
+                            <div className="rounded-lg p-6 mb-6" style={{border: '1px solid var(--border-color)', background: 'var(--card-bg)'}}>
+                                <h3 className="text-lg font-semibold mb-4" style={{color: 'var(--text-primary)'}}>Estadísticas</h3>
+                                <div style={{height: '300px'}}>
+                                    <canvas ref={chartRef}></canvas>
+                                </div>
+                            </div>
+
+                            {/* Bets Table */}
+                            <div className="rounded-lg overflow-hidden" style={{border: '1px solid var(--border-color)', background: 'var(--card-bg)'}}>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full">
+                                        <thead style={{background: 'var(--bg-secondary)'}}>
+                                            <tr>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide" style={{color: 'var(--text-tertiary)'}}>ID</th>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide" style={{color: 'var(--text-tertiary)'}}>Deporte</th>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide" style={{color: 'var(--text-tertiary)'}}>Fuente</th>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide" style={{color: 'var(--text-tertiary)'}}>Tiempo</th>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide" style={{color: 'var(--text-tertiary)'}}>Cuota</th>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide" style={{color: 'var(--text-tertiary)'}}>Estado</th>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide" style={{color: 'var(--text-tertiary)'}}>Fecha</th>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide" style={{color: 'var(--text-tertiary)'}}>Acciones</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {filteredBets.map(bet => (
+                                                <tr key={bet.id} style={{borderTop: '1px solid var(--border-color)'}}>
+                                                    <td className="px-4 py-3">
+                                                        <span className="mono-font text-sm" style={{color: 'var(--text-primary)'}}>{bet.id}</span>
+                                                    </td>
+                                                    <td className="px-4 py-3">
+                                                        <span className="text-sm capitalize" style={{color: 'var(--text-primary)'}}>{bet.deport}</span>
+                                                    </td>
+                                                    <td className="px-4 py-3">
+                                                        <span className="text-sm capitalize" style={{color: 'var(--text-secondary)'}}>{bet.source}</span>
+                                                    </td>
+                                                    <td className="px-4 py-3">
+                                                        <span className="text-sm capitalize" style={{color: 'var(--text-secondary)'}}>{bet.time_event}</span>
+                                                    </td>
+                                                    <td className="px-4 py-3">
+                                                        <span className="mono-font text-sm font-semibold" style={{color: 'var(--text-primary)'}}>{bet.odds}</span>
+                                                    </td>
+                                                    <td className="px-4 py-3">
+                                                        <span className={`status-${bet.status} px-2 py-1 rounded text-xs font-medium`}>
+                                                            {bet.status}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-4 py-3">
+                                                        <span className="text-sm mono-font" style={{color: 'var(--text-secondary)'}}>
+                                                            {new Date(bet.date).toLocaleDateString()}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-4 py-3">
+                                                        <div className="flex gap-2">
+                                                            <button
+                                                                onClick={() => openModal(bet)}
+                                                                className="py-1.5 px-3 rounded"
+                                                                style={{color: 'var(--text-primary)', background: 'var(--hover-bg)'}}
+                                                            >
+                                                                <i className="fas fa-edit text-sm"></i>
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleDelete(bet.id)}
+                                                                className="py-1.5 px-3 rounded"
+                                                                style={{color: 'var(--danger)', background: 'var(--hover-bg)'}}
+                                                            >
+                                                                <i className="fas fa-trash text-sm"></i>
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Modal */}
+                    {modalOpen && (
+                        <div className="modal-overlay" onClick={closeModal}>
+                            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                                <div className="p-6">
+                                    <div className="flex justify-between items-center mb-6">
+                                        <h2 className="text-xl font-semibold" style={{color: 'var(--text-primary)'}}>
+                                            {editingBet ? 'Editar Apuesta' : 'Nueva Apuesta'}
+                                        </h2>
+                                        <button onClick={closeModal} style={{color: 'var(--text-secondary)'}}>
+                                            <i className="fas fa-times text-xl"></i>
+                                        </button>
+                                    </div>
+
+                                    <form onSubmit={handleSubmit} className="space-y-4">
+                                        <div>
+                                            <label className="text-sm font-medium mb-2 block" style={{color: 'var(--text-secondary)'}}>Deporte</label>
+                                            <div className="custom-select">
+                                                <select
+                                                    value={formData.deport}
+                                                    onChange={(e) => setFormData({...formData, deport: e.target.value})}
+                                                    required
+                                                >
+                                                    <option value="futbol">Fútbol</option>
+                                                    <option value="basquet">Básquet</option>
+                                                    <option value="tennis">Tenis</option>
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <label className="text-sm font-medium mb-2 block" style={{color: 'var(--text-secondary)'}}>Fuente</label>
+                                            <div className="custom-select">
+                                                <select
+                                                    value={formData.source}
+                                                    onChange={(e) => setFormData({...formData, source: e.target.value})}
+                                                    required
+                                                >
+                                                    <option value="tipster">Tipster</option>
+                                                    <option value="propio">Propio</option>
+                                                    <option value="gratis">Gratis</option>
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <label className="text-sm font-medium mb-2 block" style={{color: 'var(--text-secondary)'}}>Tiempo del Evento</label>
+                                            <div className="custom-select">
+                                                <select
+                                                    value={formData.time_event}
+                                                    onChange={(e) => setFormData({...formData, time_event: e.target.value})}
+                                                    required
+                                                >
+                                                    <option value="antes">Antes</option>
+                                                    <option value="vivo">Vivo</option>
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <label className="text-sm font-medium mb-2 block" style={{color: 'var(--text-secondary)'}}>Cuota</label>
+                                            <input
+                                                type="number"
+                                                step="0.01"
+                                                min="1"
+                                                value={formData.odds}
+                                                onChange={(e) => setFormData({...formData, odds: e.target.value})}
+                                                className="input-field w-full px-4 py-2 rounded-lg"
+                                                placeholder="1.80"
+                                                required
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="text-sm font-medium mb-2 block" style={{color: 'var(--text-secondary)'}}>Estado</label>
+                                            <div className="custom-select">
+                                                <select
+                                                    value={formData.status}
+                                                    onChange={(e) => setFormData({...formData, status: e.target.value})}
+                                                    required
+                                                >
+                                                    <option value="pendiente">Pendiente</option>
+                                                    <option value="ganada">Ganada</option>
+                                                    <option value="perdida">Perdida</option>
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <label className="text-sm font-medium mb-2 block" style={{color: 'var(--text-secondary)'}}>Fecha</label>
+                                            <input
+                                                type="date"
+                                                value={formData.date}
+                                                onChange={(e) => setFormData({...formData, date: e.target.value})}
+                                                className="input-field w-full px-4 py-2 rounded-lg"
+                                                required
+                                            />
+                                        </div>
+
+                                        <div className="flex gap-3 pt-4">
+                                            <button
+                                                type="submit"
+                                                disabled={submitting}
+                                                className={`btn-primary flex-1 py-2.5 rounded-lg font-medium ${submitting ? 'btn-loading' : ''}`}
+                                            >
+                                                {!submitting && (editingBet ? 'Actualizar' : 'Crear')}
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={closeModal}
+                                                disabled={submitting}
+                                                className="btn-secondary flex-1 py-2.5 rounded-lg font-medium"
+                                            >
+                                                Cancelar
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {modalDeleteOpen && (
+                    <div className="modal-overlay" onClick={closeDeleteModal}>
+                        <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                            <div className="p-6">
+                                <h2 className="text-xl font-semibold mb-4">Eliminar apuesta</h2>
+                                <p className="text-sm mb-6">
+                                    ¿Estás seguro de eliminar esta apuesta? Esta acción no se puede deshacer.
+                                </p>
+
+                                <div className="flex gap-3">
+                                    <button
+                                        onClick={closeDeleteModal}
+                                        className="btn-secondary flex-1 py-2.5 rounded-lg font-medium"
+                                    >
+                                        Cancelar
+                                    </button>
+
+                                    <button
+                                        onClick={confirmDelete}
+                                        className="btn-primary flex-1 py-2.5 rounded-lg font-medium bg-red-600 hover:bg-red-700"
+                                    >
+                                        Eliminar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                </div>
+            );
+        };
+
+        ReactDOM.render(<BettingManagementApp />, document.getElementById('root'));
+    </script>
+</body>
+</html>
