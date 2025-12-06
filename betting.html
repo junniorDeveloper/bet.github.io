@@ -300,6 +300,8 @@
             const chartInstance = useRef(null);
             const [modalDeleteOpen, setModalDeleteOpen] = useState(false);
             const [betToDelete, setBetToDelete] = useState(null);
+            const [refreshChartKey, setRefreshChartKey] = useState(0);
+
 
 
             const API_URL = 'https://script.google.com/macros/s/AKfycbyd-FbN3BS0BRjWYK7sLp5XhKtavb2oNrm2ywYmv-0BcoiO_HN9NdstsQAO-1WDs3we/exec';
@@ -324,7 +326,7 @@
                 if (chartRef.current) {
                     updateChart();
                 }
-            }, [bets, filterStatus, filterSource, filterTimeEvent, filterDateRange]);
+            }, [bets, filterStatus, filterSource, filterTimeEvent, filterDateRange, refreshChartKey]);
 
             const loadBets = async () => {
                 try {
@@ -359,8 +361,9 @@
                         : `${API_URL}?ruta=api/v1/bet/create`;
 
                     const dataToSend = editingBet 
-                        ? { id: editingBet.id, ...formData }
-                        : formData;
+                        ? { id: editingBet.id, ...formData, odds: formData.odds.replace('.', ',') }
+                        : { ...formData, odds: formData.odds.replace('.', ',') };
+
 
                     await fetch(endpoint, {
                         method: 'POST',
@@ -426,7 +429,7 @@
                         deport: bet.deport,
                         source: bet.source,
                         time_event: bet.time_event,
-                        odds: bet.odds,
+                        odds: Number(String(bet.odds).replace(',', '.')).toFixed(2),
                         status: bet.status,
                         date: new Date(bet.date).toISOString().split('T')[0]
                     });
@@ -467,6 +470,19 @@
                 setFilterTimeEvent('all');
                 setFilterDateRange('all');
             };
+
+            const handleRefreshChart = () => {
+                // Resetear filtros
+                setFilterStatus('all');
+                setFilterSource('all');
+                setFilterTimeEvent('all');
+                setFilterDateRange('all');
+
+                // Disparar actualización del gráfico
+                setRefreshChartKey(prev => prev + 1);
+            };
+
+
 
             const isWithinDateRange = (betDate) => {
                 if (filterDateRange === 'all') return true;
@@ -829,11 +845,24 @@
 
                             {/* Chart */}
                             <div className="rounded-lg p-6 mb-6" style={{border: '1px solid var(--border-color)', background: 'var(--card-bg)'}}>
-                                <h3 className="text-lg font-semibold mb-4" style={{color: 'var(--text-primary)'}}>Estadísticas</h3>
+                                <div className="flex justify-between items-center mb-4">
+                                    <h3 className="text-lg font-semibold" style={{color: 'var(--text-primary)'}}>Estadísticas</h3>
+
+                                    {/* BOTÓN REFRESH */}
+                                    <button
+                                        onClick={handleRefreshChart}
+                                        className="btn-secondary px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2"
+                                    >
+                                        <i className="fas fa-rotate-right"></i>
+                                        Refresh
+                                    </button>
+                                </div>
+
                                 <div style={{height: '300px'}}>
                                     <canvas ref={chartRef}></canvas>
                                 </div>
                             </div>
+
 
                             {/* Bets Table */}
                             <div className="rounded-lg overflow-hidden" style={{border: '1px solid var(--border-color)', background: 'var(--card-bg)'}}>
@@ -841,7 +870,6 @@
                                     <table className="w-full">
                                         <thead style={{background: 'var(--bg-secondary)'}}>
                                             <tr>
-                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide" style={{color: 'var(--text-tertiary)'}}>ID</th>
                                                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide" style={{color: 'var(--text-tertiary)'}}>Deporte</th>
                                                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide" style={{color: 'var(--text-tertiary)'}}>Fuente</th>
                                                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide" style={{color: 'var(--text-tertiary)'}}>Tiempo</th>
@@ -854,9 +882,7 @@
                                         <tbody>
                                             {[...filteredBets].reverse().map(bet => (
                                                 <tr key={bet.id} style={{borderTop: '1px solid var(--border-color)'}}>
-                                                    <td className="px-4 py-3">
-                                                        <span className="mono-font text-sm" style={{color: 'var(--text-primary)'}}>{bet.id}</span>
-                                                    </td>
+                                                
                                                     <td className="px-4 py-3">
                                                         <span className="text-sm capitalize" style={{color: 'var(--text-primary)'}}>{bet.deport}</span>
                                                     </td>
@@ -867,8 +893,14 @@
                                                         <span className="text-sm capitalize" style={{color: 'var(--text-secondary)'}}>{bet.time_event}</span>
                                                     </td>
                                                     <td className="px-4 py-3">
-                                                        <span className="mono-font text-sm font-semibold" style={{color: 'var(--text-primary)'}}>{bet.odds}</span>
+                                                        <span 
+                                                            className="mono-font text-sm font-semibold" 
+                                                            style={{color: 'var(--text-primary)'}}
+                                                        >
+                                                            {Number(bet.odds).toFixed(2)}
+                                                        </span>
                                                     </td>
+
                                                     <td className="px-4 py-3">
                                                         <span className={`status-${bet.status} px-2 py-1 rounded text-xs font-medium`}>
                                                             {bet.status}
@@ -968,11 +1000,33 @@
                                         <div>
                                             <label className="text-sm font-medium mb-2 block" style={{color: 'var(--text-secondary)'}}>Cuota</label>
                                             <input
-                                                type="number"
+                                                type="text"
                                                 step="0.01"
                                                 min="1"
                                                 value={formData.odds}
-                                                onChange={(e) => setFormData({...formData, odds: e.target.value})}
+                                                onChange={(e) => {
+                                                    let value = e.target.value;
+
+                                                    // Convertir coma a punto
+                                                    value = value.replace(',', '.');
+
+                                                    // Permitir solo números y puntos
+                                                    value = value.replace(/[^0-9.]/g, '');
+
+                                                    // Evitar más de un punto
+                                                    const parts = value.split('.');
+                                                    if (parts.length > 2) {
+                                                        value = parts[0] + '.' + parts[1]; // Ignorar puntos adicionales
+                                                    }
+
+                                                    // Limitar a máximo 2 decimales
+                                                    if (parts.length === 2 && parts[1].length > 2) {
+                                                        value = parts[0] + '.' + parts[1].slice(0, 2);
+                                                    }
+
+                                                    setFormData({ ...formData, odds: value });
+                                                }}
+
                                                 className="input-field w-full px-4 py-2 rounded-lg"
                                                 placeholder="1.80"
                                                 required
@@ -1064,5 +1118,4 @@
         ReactDOM.render(<BettingManagementApp />, document.getElementById('root'));
     </script>
 </body>
-
 </html>
